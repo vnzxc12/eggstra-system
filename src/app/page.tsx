@@ -1,69 +1,92 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+// ==============================================================================
+// Eggstra - Executive Dashboard Page (Dual Theme & Philippine Peso ₱)
+// ==============================================================================
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import {
+  PlusCircle,
+  ArrowRight,
+  ClipboardList,
+} from 'lucide-react';
+import { MetricCards } from '@/components/dashboard/MetricCards';
+import { EggProductionChart } from '@/components/dashboard/EggProductionChart';
+import { MortalityChart } from '@/components/dashboard/MortalityChart';
+import { FinancialOverviewChart } from '@/components/dashboard/FinancialOverviewChart';
+import { DailyLogsTable } from '@/components/logs/DailyLogsTable';
+import { DailyLogModal } from '@/components/logs/DailyLogModal';
+import { usePoultry } from '@/lib/context/PoultryContext';
+
+export default function DashboardPage() {
+  const { metrics, activeFlocks } = usePoultry();
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="space-y-6">
+      {/* Dashboard Top Hero Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-emerald-950/40 text-white border border-slate-800/80 shadow-md">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight">
+              Executive Poultry Operations
+            </h1>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold">
+              Live Layer Tracking (PHP ₱)
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-300">
+            Real-time hen-day laying performance, mortality early-warning, egg tray dispatch &amp; FCR monitoring.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsLogModalOpen(true)}
+            className="flex items-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <PlusCircle className="w-4 h-4" />
+            <span>+ Daily Production Log</span>
+          </button>
         </div>
-      </main>
+      </div>
+
+      {/* 1. Core Metric Cards Grid */}
+      <MetricCards />
+
+      {/* 2. Main 30-Day Laying Curve vs Expected Commercial Benchmark */}
+      <EggProductionChart />
+
+      {/* 3. Side-by-Side Operational & Financial Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MortalityChart />
+        <FinancialOverviewChart />
+      </div>
+
+      {/* 4. Recent Production Logs Stream */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <ClipboardList className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">Recent Collection Records</h3>
+          </div>
+          <Link
+            href="/logs"
+            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 transition-colors"
+          >
+            <span>View All Logs</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <DailyLogsTable />
+      </div>
+
+      {/* Quick Entry Modal */}
+      <DailyLogModal isOpen={isLogModalOpen} onClose={() => setIsLogModalOpen(false)} />
     </div>
   );
 }
