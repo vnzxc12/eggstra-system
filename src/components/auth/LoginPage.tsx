@@ -18,10 +18,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { useRouter } from 'next/navigation';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
 
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -43,6 +45,8 @@ export const LoginPage: React.FC = () => {
       const res = await login(username, password);
       if (!res.success) {
         setErrorMessage(res.error || 'Invalid username or password.');
+      } else {
+        router.push('/');
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Login failed. Please verify your connection.');
