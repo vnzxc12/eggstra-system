@@ -123,7 +123,7 @@ export const PoultryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             supabase.from('expenses').select('*').order('date', { ascending: false }),
           ]);
 
-          if (!flocksRes.error && flocksRes.data && flocksRes.data.length > 0) {
+          if (!flocksRes.error && flocksRes.data !== null) {
             setFlocks(flocksRes.data as Flock[]);
             setDailyLogs((logsRes.data as DailyLog[]) || []);
             setSales((salesRes.data as SalesRecord[]) || []);
@@ -133,23 +133,23 @@ export const PoultryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return;
           }
         } catch (err) {
-          console.warn('Supabase fetch returned empty or error, falling back to local/demo state:', err);
+          console.warn('Supabase query error, checking local store:', err);
         }
       }
 
-      // Load from localStorage or use rich INITIAL sample data
+      // Load from localStorage if available
       if (typeof window !== 'undefined') {
         const storedFlocks = localStorage.getItem(LOCAL_STORAGE_KEYS.FLOCKS);
         const storedLogs = localStorage.getItem(LOCAL_STORAGE_KEYS.LOGS);
         const storedSales = localStorage.getItem(LOCAL_STORAGE_KEYS.SALES);
         const storedExpenses = localStorage.getItem(LOCAL_STORAGE_KEYS.EXPENSES);
 
-        if (storedFlocks && storedLogs) {
+        if (storedFlocks !== null && storedLogs !== null) {
           try {
             const parsedFlocks = JSON.parse(storedFlocks);
             const parsedLogs = JSON.parse(storedLogs);
-            const parsedSales = storedSales ? JSON.parse(storedSales) : INITIAL_SALES;
-            const parsedExpenses = storedExpenses ? JSON.parse(storedExpenses) : INITIAL_EXPENSES;
+            const parsedSales = storedSales !== null ? JSON.parse(storedSales) : [];
+            const parsedExpenses = storedExpenses !== null ? JSON.parse(storedExpenses) : [];
 
             setFlocks(recalculateFlockCounts(parsedFlocks, parsedLogs));
             setDailyLogs(parsedLogs);
@@ -158,18 +158,17 @@ export const PoultryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setIsLoading(false);
             return;
           } catch (e) {
-            console.error('Error parsing localStorage, loading defaults:', e);
+            console.error('Error parsing localStorage:', e);
           }
         }
       }
 
-      // Seed with initial realistic data
-      const initialSyncedFlocks = recalculateFlockCounts(INITIAL_FLOCKS, INITIAL_DAILY_LOGS);
-      setFlocks(initialSyncedFlocks);
-      setDailyLogs(INITIAL_DAILY_LOGS);
-      setSales(INITIAL_SALES);
-      setExpenses(INITIAL_EXPENSES);
-      persistLocal(initialSyncedFlocks, INITIAL_DAILY_LOGS, INITIAL_SALES, INITIAL_EXPENSES);
+      // Default to empty state ready for user entry
+      setFlocks([]);
+      setDailyLogs([]);
+      setSales([]);
+      setExpenses([]);
+      persistLocal([], [], [], []);
       setIsLoading(false);
     }
 
