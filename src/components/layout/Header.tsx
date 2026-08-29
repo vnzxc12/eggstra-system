@@ -1,7 +1,7 @@
 'use client';
 
 // ==============================================================================
-// Eggstra - Header Component with Theme Switcher & Quick Actions
+// Eggstra - Header Component with User Profile & Theme Switcher
 // ==============================================================================
 
 import React from 'react';
@@ -13,9 +13,12 @@ import {
   Moon,
   AlertTriangle,
   Coins,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { usePoultry } from '@/lib/context/PoultryContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { useAuth } from '@/lib/context/AuthContext';
 import { CURRENCY_SYMBOL } from '@/lib/utils/formatters';
 
 interface HeaderProps {
@@ -31,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenQuickLog }) => {
   } = usePoultry();
 
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -77,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenQuickLog }) => {
           </div>
         </div>
 
-        {/* Right: Theme Switcher, Alert Status & Quick Log */}
+        {/* Right: Theme Switcher, User Profile & Quick Log */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mortality Warning Banner if alert is active */}
           {metrics.mortalityAlertLevel !== 'normal' && (
@@ -110,6 +114,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenQuickLog }) => {
               <Sun className="w-4 h-4 text-amber-400 hover:text-amber-300 transition-colors" />
             )}
           </button>
+
+          {/* User Profile & Sign Out */}
+          {user && (
+            <div className="flex items-center gap-2 pl-1 border-l border-slate-200 dark:border-slate-800">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="font-bold text-slate-800 dark:text-slate-200">{user.username}</span>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold px-1 rounded bg-emerald-500/10">
+                  Admin
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-rose-300 bg-slate-50 hover:bg-rose-50 dark:bg-slate-950 dark:hover:bg-rose-950/30 text-slate-600 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-all cursor-pointer shadow-xs"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Quick Add Log Button */}
           <button

@@ -18,8 +18,11 @@ import {
   TrendingUp,
   ShieldCheck,
   PlusCircle,
+  LogOut,
+  UserCheck,
 } from 'lucide-react';
 import { usePoultry } from '@/lib/context/PoultryContext';
+import { useAuth } from '@/lib/context/AuthContext';
 
 interface SidebarProps {
   onOpenQuickLog: () => void;
@@ -28,6 +31,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onOpenQuickLog }) => {
   const pathname = usePathname();
   const { metrics, activeFlocks } = usePoultry();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -105,6 +109,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenQuickLog }) => {
           );
         })}
       </nav>
+
+      {/* User Session Strip & Sign Out */}
+      {user && (
+        <div className="px-4 py-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
+              <UserCheck className="w-4 h-4" />
+            </div>
+            <div className="truncate max-w-[120px]">
+              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{user.username}</p>
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Master Admin</p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+            title="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Mini Live KPI Footer */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50">

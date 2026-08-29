@@ -1,7 +1,7 @@
 'use client';
 
 // ==============================================================================
-// Eggstra - AppShell Component (Layout Wrapper with Dual-Theme)
+// Eggstra - AppShell Component (Layout Wrapper with Authentication Guard)
 // ==============================================================================
 
 import React, { useState } from 'react';
@@ -12,16 +12,20 @@ import {
   ClipboardList,
   Layers,
   ShoppingBag,
-  DollarSign,
+  Coins,
   BarChart3,
   Plus,
+  Egg,
 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { DailyLogModal } from '../logs/DailyLogModal';
+import { useAuth } from '@/lib/context/AuthContext';
+import { LoginPage } from '../auth/LoginPage';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname();
+  const { isAuthenticated, isLoading } = useAuth();
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
 
   const mobileNavItems = [
@@ -29,10 +33,32 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
     { name: 'Logs', href: '/logs', icon: ClipboardList },
     { name: 'Flocks', href: '/flocks', icon: Layers },
     { name: 'Sales', href: '/sales', icon: ShoppingBag },
-    { name: 'Expenses', href: '/expenses', icon: DollarSign },
+    { name: 'Expenses', href: '/expenses', icon: Coins },
     { name: 'Reports', href: '/reports', icon: BarChart3 },
   ];
 
+  // 1. Loading Screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 via-emerald-500 to-teal-400 p-0.5 shadow-xl animate-bounce">
+          <div className="w-full h-full bg-white dark:bg-slate-900 rounded-[14px] flex items-center justify-center">
+            <Egg className="w-8 h-8 text-amber-500 fill-amber-500/20" />
+          </div>
+        </div>
+        <p className="mt-4 text-xs sm:text-sm font-bold tracking-wider uppercase text-slate-600 dark:text-slate-400">
+          Loading Eggstra OS...
+        </p>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated: Show Master Admin Login Page
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  // 3. Authenticated: Render Main Application Shell
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-emerald-500 selection:text-white">
       {/* Desktop Sidebar */}
@@ -66,12 +92,12 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               href={item.href}
               className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all ${
                 isActive
-                  ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
+                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-tight mt-0.5">{item.name}</span>
+              <span className="text-[10px] font-semibold tracking-tight mt-0.5">{item.name}</span>
             </Link>
           );
         })}
