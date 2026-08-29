@@ -1,14 +1,14 @@
 'use client';
 
 // ==============================================================================
-// Eggstra - Secure Authentication Login Portal (Supabase RBAC)
+// Eggstra - Secure Authentication Login Portal (Username & Password)
 // ==============================================================================
 
 import React, { useState } from 'react';
 import {
   Egg,
   Lock,
-  Mail,
+  User,
   Eye,
   EyeOff,
   ArrowRight,
@@ -23,7 +23,7 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [email, setEmail] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -33,16 +33,16 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage('Please enter both email and password.');
+    if (!username.trim() || !password.trim()) {
+      setErrorMessage('Please enter both username and password.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await login(email, password);
+      const res = await login(username, password);
       if (!res.success) {
-        setErrorMessage(res.error || 'Invalid email or password.');
+        setErrorMessage(res.error || 'Invalid username or password.');
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Login failed. Please verify your connection.');
@@ -99,19 +99,19 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* Email Address */}
+          {/* Username */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
-              Email Address
+              Username
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="email"
-                placeholder="name@farm.com or admin"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
+                type="text"
+                placeholder="Enter username (e.g. admin)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 required
               />

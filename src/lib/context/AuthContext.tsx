@@ -197,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const trimmedPass = password.trim();
 
     if (!trimmedInput || !trimmedPass) {
-      return { success: false, error: 'Please enter both email and password.' };
+      return { success: false, error: 'Please enter both username and password.' };
     }
 
     // Standardize input (if user typed "admin", resolve to "admin@eggstra.farm")
@@ -251,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         if (error) {
-          return { success: false, error: error.message || 'Invalid email or password.' };
+          return { success: false, error: error.message || 'Invalid username or password.' };
         }
 
         if (data.user) {
@@ -277,7 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return {
       success: false,
-      error: 'Invalid credentials. Please verify your email and password.',
+      error: 'Invalid credentials. Please verify your username and password.',
     };
   };
 
