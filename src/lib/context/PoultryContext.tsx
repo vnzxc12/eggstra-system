@@ -60,6 +60,7 @@ interface PoultryContextType {
 
   // Data helpers
   resetToSampleData: () => void;
+  clearAllData: () => Promise<void>;
   exportAllToJSON: () => string;
 }
 
@@ -796,6 +797,25 @@ export const PoultryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     persistLocal(initialSynced, INITIAL_DAILY_LOGS, INITIAL_SALES, INITIAL_EXPENSES);
   };
 
+  // Clear all data (Start fresh with 0 records)
+  const clearAllData = async (): Promise<void> => {
+    if (isSupabaseLive && supabase) {
+      try {
+        await supabase.from('daily_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('sales_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('flocks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch (err) {
+        console.error('Failed to wipe Supabase database:', err);
+      }
+    }
+    setFlocks([]);
+    setDailyLogs([]);
+    setSales([]);
+    setExpenses([]);
+    persistLocal([], [], [], []);
+  };
+
   const exportAllToJSON = (): string => {
     return JSON.stringify({ flocks, dailyLogs, sales, expenses }, null, 2);
   };
@@ -829,6 +849,7 @@ export const PoultryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateExpense,
     deleteExpense,
     resetToSampleData,
+    clearAllData,
     exportAllToJSON,
   };
 

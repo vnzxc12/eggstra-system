@@ -15,6 +15,8 @@ import {
   Zap,
   Sun,
   Moon,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { usePoultry } from '@/lib/context/PoultryContext';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -106,6 +108,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS trg_recalculate_flock_count ON public.daily_logs;
 CREATE TRIGGER trg_recalculate_flock_count
 AFTER INSERT OR UPDATE OR DELETE ON public.daily_logs
 FOR EACH ROW EXECUTE FUNCTION public.fn_sync_flock_headcount();
@@ -121,16 +124,36 @@ CREATE POLICY "Users can manage own daily logs" ON public.daily_logs FOR ALL USI
 CREATE POLICY "Users can manage own sales records" ON public.sales_records FOR ALL USING (auth.uid() = user_id OR user_id IS NULL);
 CREATE POLICY "Users can manage own expenses" ON public.expenses FOR ALL USING (auth.uid() = user_id OR user_id IS NULL);`;
 
+const WIPE_DATA_SQL = `-- Wipe all farm data and start fresh with empty tables:
+TRUNCATE TABLE public.daily_logs, public.sales_records, public.expenses, public.flocks CASCADE;`;
+
 export default function SettingsPage() {
-  const { resetToSampleData, exportAllToJSON, isSupabaseLive, flocks, dailyLogs, sales, expenses } = usePoultry();
+  const {
+    resetToSampleData,
+    clearAllData,
+    exportAllToJSON,
+    isSupabaseLive,
+    flocks,
+    dailyLogs,
+    sales,
+    expenses,
+  } = usePoultry();
   const { theme, toggleTheme } = useTheme();
   const [copied, setCopied] = useState(false);
+  const [copiedWipeSQL, setCopiedWipeSQL] = useState(false);
   const [resetConfirmed, setResetConfirmed] = useState(false);
+  const [wipeConfirmed, setWipeConfirmed] = useState(false);
 
   const handleCopySQL = () => {
     navigator.clipboard.writeText(SCHEMA_SQL_SNIPPET);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleCopyWipeSQL = () => {
+    navigator.clipboard.writeText(WIPE_DATA_SQL);
+    setCopiedWipeSQL(true);
+    setTimeout(() => setCopiedWipeSQL(false), 2500);
   };
 
   const handleResetData = () => {
@@ -139,6 +162,17 @@ export default function SettingsPage() {
       setResetConfirmed(true);
       setTimeout(() => setResetConfirmed(false), 2500);
     }
+  };
+
+  const handleClearAllData = async () => {
+    const confirm1 = window.confirm(
+      '⚠️ WARNING: Are you sure you want to WIPE AND DELETE ALL DATA?\n\nThis will remove all flocks, daily egg logs, sales records, and expenses so you can start completely fresh.'
+    );
+    if (!confirm1) return;
+
+    await clearAllData();
+    setWipeConfirmed(true);
+    setTimeout(() => setWipeConfirmed(false), 3000);
   };
 
   const handleDownloadJSON = () => {
@@ -298,7 +332,68 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* 3. SQL Migration Viewer */}
+      {/* 3. Farm Data Management & Wipe Controls */}
+      <div className="glass-panel rounded-2xl p-6 space-y-4">
+        <div>
+          <h2 className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-500" />
+            Farm Data Management &amp; Database Actions
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Start completely fresh with 0 records or reset to commercial Philippine sample data.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          {/* Wipe All Data Button */}
+          <button
+            onClick={handleClearAllData}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>{wipeConfirmed ? 'All Data Wiped Clean!' : 'Wipe & Delete All Data (Start Clean)'}</span>
+          </button>
+
+          {/* Reset to Sample Data */}
+          <button
+            onClick={handleResetData}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4 text-amber-500" />
+            <span>{resetConfirmed ? 'Reset Successful!' : 'Reset to 30-Day Sample Data (PHP)'}</span>
+          </button>
+
+          {/* Backup JSON */}
+          <button
+            onClick={handleDownloadJSON}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs transition-all cursor-pointer"
+          >
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Download Farm JSON Backup</span>
+          </button>
+        </div>
+
+        {/* Supabase Truncate SQL Help Box */}
+        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 mt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              Supabase SQL Editor Command (to wipe cloud database):
+            </span>
+            <button
+              onClick={handleCopyWipeSQL}
+              className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:underline cursor-pointer"
+            >
+              {copiedWipeSQL ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedWipeSQL ? 'Copied!' : 'Copy SQL'}</span>
+            </button>
+          </div>
+          <code className="block p-2.5 rounded-lg bg-slate-900 text-rose-400 font-mono text-xs select-all">
+            {WIPE_DATA_SQL}
+          </code>
+        </div>
+      </div>
+
+      {/* 4. SQL Migration Viewer */}
       <div className="glass-panel rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -330,29 +425,6 @@ export default function SettingsPage() {
           <pre className="p-4 bg-slate-950 text-slate-300 font-mono text-xs overflow-x-auto max-h-96 leading-relaxed select-text">
             {SCHEMA_SQL_SNIPPET}
           </pre>
-        </div>
-      </div>
-
-      {/* 4. Data Backup & Reset Tools */}
-      <div className="glass-panel rounded-2xl p-6 space-y-4">
-        <h2 className="font-bold text-base text-slate-900 dark:text-slate-100">Farm Data Operations &amp; Backup (PHP)</h2>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleDownloadJSON}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs transition-all cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Download Complete Farm JSON Backup</span>
-          </button>
-
-          <button
-            onClick={handleResetData}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-slate-300 dark:border-slate-700 hover:border-rose-300 text-slate-700 dark:text-slate-300 hover:text-rose-700 dark:hover:text-rose-300 font-semibold text-xs transition-all cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4 text-amber-500" />
-            <span>{resetConfirmed ? 'Reset Successful!' : 'Reset to Default 30-Day Sample Data (PHP)'}</span>
-          </button>
         </div>
       </div>
     </div>
