@@ -19,8 +19,14 @@ import {
 import { usePoultry } from '@/lib/context/PoultryContext';
 import { formatPHP, CURRENCY_SYMBOL } from '@/lib/utils/formatters';
 
+import { MetricCardsGridSkeleton } from '../common/SkeletonLoader';
+
 export const MetricCards: React.FC = () => {
-  const { metrics, selectedFlockId, activeFlocks } = usePoultry();
+  const { metrics, selectedFlockId, activeFlocks, isLoading } = usePoultry();
+
+  if (isLoading) {
+    return <MetricCardsGridSkeleton />;
+  }
 
   const selectedFlockName =
     selectedFlockId === 'all'

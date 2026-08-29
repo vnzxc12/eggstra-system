@@ -3,6 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/lib/context/ThemeContext';
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { PoultryProvider } from '@/lib/context/PoultryContext';
+import { ToastProvider } from '@/components/common/ToastContext';
 import { AppShell } from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
@@ -19,11 +20,13 @@ export default function RootLayout({
     <html lang="en" className="light" suppressHydrationWarning>
       <body className="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased min-h-screen">
         <ThemeProvider>
-          <AuthProvider>
-            <PoultryProvider>
-              <AppShell>{children}</AppShell>
-            </PoultryProvider>
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <PoultryProvider>
+                <AppShell>{children}</AppShell>
+              </PoultryProvider>
+            </AuthProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

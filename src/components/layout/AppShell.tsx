@@ -1,7 +1,7 @@
 'use client';
 
 // ==============================================================================
-// Eggstra - AppShell Component (Layout Wrapper with Authentication Guard)
+// Eggstra - Responsive AppShell (Auth Guard, 20-Min Idle Timer & Mobile Drawer)
 // ==============================================================================
 
 import React, { useState } from 'react';
@@ -22,11 +22,17 @@ import { Header } from './Header';
 import { DailyLogModal } from '../logs/DailyLogModal';
 import { useAuth } from '@/lib/context/AuthContext';
 import { LoginPage } from '../auth/LoginPage';
+import { useIdleTimer } from '@/lib/hooks/useIdleTimer';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname();
   const { isAuthenticated, isLoading } = useAuth();
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Auto-logout user after 20 minutes of inactivity
+  useIdleTimer(20 * 60 * 1000);
 
   const mobileNavItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -58,17 +64,42 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
     return <LoginPage />;
   }
 
-  // 3. Authenticated: Render Main Application Shell
+  // 3. Authenticated: Render Main Application Shell with Off-Canvas Drawer
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-emerald-500 selection:text-white">
-      {/* Desktop Sidebar */}
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-emerald-500 selection:text-white relative">
+      {/* Desktop Persistent Sidebar */}
       <Sidebar onOpenQuickLog={() => setIsQuickLogOpen(true)} />
+
+      {/* Mobile & Tablet Off-Canvas Drawer Overlay */}
+      {isMobileDrawerOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+
+          {/* Drawer Content */}
+          <div className="relative z-10 w-72 max-w-[85vw] h-full shadow-2xl animate-in slide-in-from-left duration-300">
+            <Sidebar
+              onOpenQuickLog={() => setIsQuickLogOpen(true)}
+              onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
+              isMobileDrawer={true}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-6">
-        <Header onOpenQuickLog={() => setIsQuickLogOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {children}
+        <Header
+          onOpenQuickLog={() => setIsQuickLogOpen(true)}
+          onToggleMobileSidebar={() => setIsMobileDrawerOpen(true)}
+        />
+        <main className="flex-1 p-3 sm:p-5 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </main>
       </div>
 
@@ -82,7 +113,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
       </button>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-2 py-1.5 flex items-center justify-around">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-2 py-1.5 flex items-center justify-around">
         {mobileNavItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;

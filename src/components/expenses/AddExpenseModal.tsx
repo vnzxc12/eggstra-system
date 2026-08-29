@@ -1,14 +1,15 @@
 'use client';
 
 // ==============================================================================
-// Eggstra - Add Expense Record Modal (Philippine Peso ₱ & Dual Theme)
+// Eggstra - Add Expense Record Modal (Mobile Bottom-Sheet & Toast Alerts)
 // ==============================================================================
 
 import React, { useState } from 'react';
-import { X, Calendar, Tag, CheckCircle2, AlertTriangle, Coins } from 'lucide-react';
+import { X, Calendar, Tag, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { usePoultry } from '@/lib/context/PoultryContext';
+import { useToast } from '@/components/common/ToastContext';
 import { ExpenseCategory } from '@/lib/types/poultry';
-import { CURRENCY_SYMBOL } from '@/lib/utils/formatters';
+import { formatPHP, CURRENCY_SYMBOL } from '@/lib/utils/formatters';
 
 interface AddExpenseModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const CATEGORY_OPTIONS: { id: ExpenseCategory; label: string; placeholder: strin
 
 export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose }) => {
   const { addExpense } = usePoultry();
+  const { showToast } = useToast();
 
   const [category, setCategory] = useState<ExpenseCategory>('feed');
   const [itemName, setItemName] = useState<string>('');
@@ -62,43 +64,51 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
         date: expenseDate,
       });
 
+      showToast(
+        'Expense Recorded',
+        `Logged "${itemName.trim()}" (${formatPHP(totalCost)}) successfully.`,
+        'success',
+        4000
+      );
+
       setItemName('');
       onClose();
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to record expense.');
+      showToast('Expense Save Error', err.message || 'Failed to record expense.', 'error', 5000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden my-6 transition-colors">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[94vh] sm:max-h-[88vh] flex flex-col transition-all">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 p-0.5 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 p-0.5 shadow-xs shrink-0">
               <div className="w-full h-full bg-white dark:bg-slate-900 rounded-[10px] flex items-center justify-center text-amber-500 font-bold">
                 <span>{CURRENCY_SYMBOL}</span>
               </div>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Log Farm Expense (PHP)</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Record layer feed, medication, bedding, and labor costs in Philippine Peso</p>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">Log Farm Expense (PHP)</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Record layer feed, medication, bedding, and labor costs</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           {errorMessage && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 text-xs sm:text-sm">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
@@ -138,7 +148,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
               placeholder={currentCategory.placeholder}
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500"
               required
             />
           </div>
@@ -151,6 +161,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 min="0.1"
                 value={quantity}
@@ -166,6 +177,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0"
                 value={totalCost}
@@ -191,11 +203,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 pb-2 sm:pb-0">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isSubmitting ? 'Logging...' : 'Save Expense Record (PHP)'}</span>

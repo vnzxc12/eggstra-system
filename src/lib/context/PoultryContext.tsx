@@ -175,39 +175,60 @@ export const PoultryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     loadData();
   }, [persistLocal, recalculateFlockCounts]);
 
-  // Set up Supabase Realtime subscriptions if connected
+  // Set up robust Supabase Realtime subscriptions across all tables
   useEffect(() => {
     const client = supabase;
-    if (!isSupabaseConfigured || !client || !isSupabaseLive) return;
+    if (!isSupabaseConfigured || !client) return;
 
     const channel = client
-      .channel('poultry-realtime-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'flocks' }, () => {
-        client.from('flocks').select('*').then((res) => {
-          if (res.data) setFlocks(res.data as Flock[]);
-        });
+      .channel('eggstra-realtime-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'flocks' }, async () => {
+        const res = await client.from('flocks').select('*').order('created_at', { ascending: false });
+        if (res.data) {
+          setFlocks((prev) => {
+            const synced = recalculateFlockCounts(res.data as Flock[], dailyLogs);
+            persistLocal(synced, dailyLogs, sales, expenses);
+            return synced;
+          });
+        }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_logs' }, () => {
-        client.from('daily_logs').select('*').order('log_date', { ascending: false }).then((res) => {
-          if (res.data) setDailyLogs(res.data as DailyLog[]);
-        });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_logs' }, async () => {
+        const [logsRes, flocksRes] = await Promise.all([
+          client.from('daily_logs').select('*').order('log_date', { ascending: false }),
+          client.from('flocks').select('*').order('created_at', { ascending: false }),
+        ]);
+
+        if (logsRes.data) {
+          const freshLogs = logsRes.data as DailyLog[];
+          setDailyLogs(freshLogs);
+          const baseFlocks = (flocksRes.data as Flock[]) || flocks;
+          const syncedFlocks = recalculateFlockCounts(baseFlocks, freshLogs);
+          setFlocks(syncedFlocks);
+          persistLocal(syncedFlocks, freshLogs, sales, expenses);
+        }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_records' }, () => {
-        client.from('sales_records').select('*').order('sale_date', { ascending: false }).then((res) => {
-          if (res.data) setSales(res.data as SalesRecord[]);
-        });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_records' }, async () => {
+        const res = await client.from('sales_records').select('*').order('sale_date', { ascending: false });
+        if (res.data) {
+          const freshSales = res.data as SalesRecord[];
+          setSales(freshSales);
+          persistLocal(flocks, dailyLogs, freshSales, expenses);
+        }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
-        client.from('expenses').select('*').order('date', { ascending: false }).then((res) => {
-          if (res.data) setExpenses(res.data as ExpenseRecord[]);
-        });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async () => {
+        const res = await client.from('expenses').select('*').order('date', { ascending: false });
+        if (res.data) {
+          const freshExpenses = res.data as ExpenseRecord[];
+          setExpenses(freshExpenses);
+          persistLocal(flocks, dailyLogs, sales, freshExpenses);
+        }
       })
       .subscribe();
 
     return () => {
       client.removeChannel(channel);
     };
-  }, [isSupabaseLive]);
+  }, [dailyLogs, flocks, sales, expenses, persistLocal, recalculateFlockCounts]);
 
   // Active flocks filter
   const activeFlocks = useMemo(() => {
