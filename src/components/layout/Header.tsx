@@ -127,7 +127,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenQuickLog, onToggleMobileSi
             <div className="hidden sm:flex items-center gap-1.5 pl-1 border-l border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[80px]">{user.username}</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[90px]">{user.fullName || user.username}</span>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold px-1 rounded bg-emerald-500/10 capitalize">
+                  {user.role === 'master_admin' ? 'Admin' : user.role.replace('_', ' ')}
+                </span>
               </div>
               <button
                 onClick={logout}

@@ -1,23 +1,20 @@
 'use client';
 
 // ==============================================================================
-// Eggstra - Master Admin Login Portal (Dual-Theme & High Contrast)
+// Eggstra - Secure Authentication Login Portal (Supabase RBAC)
 // ==============================================================================
 
 import React, { useState } from 'react';
 import {
   Egg,
   Lock,
-  User,
+  Mail,
   Eye,
   EyeOff,
   ArrowRight,
-  ShieldCheck,
   AlertCircle,
   Sun,
   Moon,
-  Sparkles,
-  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -26,7 +23,7 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [username, setUsername] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,33 +33,27 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!username.trim() || !password.trim()) {
-      setErrorMessage('Please enter both username and password.');
+    if (!email.trim() || !password.trim()) {
+      setErrorMessage('Please enter both email and password.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await login(username, password);
+      const res = await login(email, password);
       if (!res.success) {
-        setErrorMessage(res.error || 'Invalid credentials. Please try again.');
+        setErrorMessage(res.error || 'Invalid email or password.');
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Login failed. Please check your network.');
+      setErrorMessage(err.message || 'Login failed. Please verify your connection.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFillMasterAdmin = () => {
-    setUsername('admin');
-    setPassword('password123');
-    setErrorMessage(null);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative transition-colors">
-      {/* Background Decorative Gradient Orbs */}
+      {/* Background Subtle Gradient Accents */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -70,7 +61,7 @@ export const LoginPage: React.FC = () => {
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
         <button
           onClick={toggleTheme}
-          className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-sm"
+          className="p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-xs"
           title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
         >
           {theme === 'light' ? (
@@ -95,12 +86,8 @@ export const LoginPage: React.FC = () => {
             Eggstra <span className="text-emerald-700 dark:text-emerald-400">OS</span>
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mt-1">
-            Commercial Poultry &amp; Egg Production System
+            Commercial Poultry &amp; Layer Farm System
           </p>
-          <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Master Admin Access</span>
-          </div>
         </div>
 
         {/* Form Body */}
@@ -112,19 +99,19 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* Username / Email */}
+          {/* Email Address */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
-              Username or Email
+              Email Address
             </label>
             <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="text"
-                placeholder="Enter username (e.g. admin)"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
+                type="email"
+                placeholder="name@farm.com or admin"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 required
               />
@@ -142,7 +129,7 @@ export const LoginPage: React.FC = () => {
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Enter password"
+                placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
@@ -167,31 +154,19 @@ export const LoginPage: React.FC = () => {
             className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {isSubmitting ? (
-              <span>Authenticating...</span>
+              <span>Signing In...</span>
             ) : (
               <>
-                <span>Sign In to Eggstra OS</span>
+                <span>Sign In</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
-
-          {/* Quick Fill Demo / Master Admin Credentials Helper */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={handleFillMasterAdmin}
-              className="w-full p-2.5 rounded-xl border border-dashed border-amber-300 dark:border-amber-500/40 bg-amber-50/60 dark:bg-amber-500/10 hover:bg-amber-100/70 dark:hover:bg-amber-500/20 text-amber-900 dark:text-amber-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Auto-Fill Master Admin (admin / password123)</span>
-            </button>
-          </div>
         </form>
 
         {/* Card Footer */}
         <div className="p-4 text-center border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 text-[11px] text-slate-500 dark:text-slate-400">
-          Eggstra OS • Philippine Layer Farm Operations Standard (PHP ₱)
+          Eggstra OS • Philippine Layer Farm Operations (PHP ₱)
         </div>
       </div>
     </div>

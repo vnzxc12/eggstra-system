@@ -1,17 +1,19 @@
 'use client';
 
 // ==============================================================================
-// Eggstra Poultry Farm Management System - Master Admin & Supabase Auth Context
+// Eggstra Poultry Farm Management System - Supabase RBAC Auth Context
 // ==============================================================================
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabase/client';
+import { UserRole, UserStatus, UserProfile } from '../types/poultry';
 
 export interface AuthUser {
   id: string;
   username: string;
   email: string;
-  role: 'master_admin' | 'farm_manager' | 'operator';
+  role: UserRole;
+  status: UserStatus;
   fullName: string;
 }
 
@@ -19,13 +21,19 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  isMasterAdmin: boolean;
+  isManager: boolean;
+  isFarmHand: boolean;
+  isViewer: boolean;
+  hasRole: (roles: UserRole[]) => boolean;
+  login: (emailOrUsername: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_STORAGE_KEY = 'eggstra_auth_session_v1';
+const AUTH_STORAGE_KEY = 'eggstra_auth_session_v2';
 
 // Master Admin Fallback Definition
 const MASTER_ADMIN_USER: AuthUser = {
@@ -33,6 +41,7 @@ const MASTER_ADMIN_USER: AuthUser = {
   username: 'admin',
   email: 'admin@eggstra.farm',
   role: 'master_admin',
+  status: 'active',
   fullName: 'Master Farm Administrator',
 };
 
@@ -40,7 +49,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Restore authenticated session on initial mount
+  // Fetch full user profile and role from Supabase user_profiles
+  const fetchUserProfile = useCallback(async (userId: string, email: string): Promise<AuthUser | null> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (!error && data) {
+        const profile = data as UserProfile;
+        if (profile.status === 'inactive') {
+          return null;
+        }
+
+        return {
+          id: profile.id,
+          username: email.split('@')[0],
+          email: profile.email || email,
+          role: profile.role || 'farm_hand',
+          status: profile.status || 'active',
+          fullName: profile.full_name || email.split('@')[0],
+        };
+      }
+    } catch (err) {
+      console.warn('Could not fetch user profile from user_profiles table:', err);
+    }
+
+    // Default active profile fallback
+    return {
+      id: userId,
+      username: email.split('@')[0],
+      email: email,
+      role: email === 'admin@eggstra.farm' ? 'master_admin' : 'farm_hand',
+      status: 'active',
+      fullName: email.split('@')[0],
+    };
+  }, []);
+
+  // Restore authenticated session on mount
   useEffect(() => {
     async function restoreSession() {
       setIsLoading(true);
@@ -51,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            if (parsed && parsed.username) {
+            if (parsed && parsed.email) {
               setUser(parsed);
               setIsLoading(false);
               return;
@@ -67,16 +119,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            const authUser: AuthUser = {
-              id: session.user.id,
-              username: session.user.email?.split('@')[0] || 'admin',
-              email: session.user.email || 'admin@eggstra.farm',
-              role: 'master_admin',
-              fullName: session.user.user_metadata?.full_name || 'Master Farm Administrator',
-            };
-            setUser(authUser);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+            const profile = await fetchUserProfile(session.user.id, session.user.email || 'user@eggstra.farm');
+            if (profile) {
+              setUser(profile);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
+              }
+            } else {
+              // Account is inactive or invalid
+              await supabase.auth.signOut();
+              setUser(null);
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem(AUTH_STORAGE_KEY);
+              }
             }
           }
         } catch (err) {
@@ -90,19 +145,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     restoreSession();
 
     // Supabase auth state listener
-    if (isSupabaseConfigured && supabase) {
-      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const client = supabase;
+    if (isSupabaseConfigured && client) {
+      const { data: authListener } = client.auth.onAuthStateChange(async (_event, session) => {
         if (session?.user) {
-          const authUser: AuthUser = {
-            id: session.user.id,
-            username: session.user.email?.split('@')[0] || 'admin',
-            email: session.user.email || 'admin@eggstra.farm',
-            role: 'master_admin',
-            fullName: session.user.user_metadata?.full_name || 'Master Farm Administrator',
-          };
-          setUser(authUser);
+          const profile = await fetchUserProfile(session.user.id, session.user.email || 'user@eggstra.farm');
+          if (profile) {
+            setUser(profile);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
+            }
+          } else {
+            if (client) {
+              await client.auth.signOut();
+            }
+            setUser(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(AUTH_STORAGE_KEY);
+            }
+          }
+        } else {
+          setUser(null);
           if (typeof window !== 'undefined') {
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+            localStorage.removeItem(AUTH_STORAGE_KEY);
           }
         }
       });
@@ -111,18 +176,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener?.subscription?.unsubscribe();
       };
     }
-  }, []);
+  }, [fetchUserProfile]);
+
+  const refreshProfile = async (): Promise<void> => {
+    if (!user) return;
+    const profile = await fetchUserProfile(user.id, user.email);
+    if (profile) {
+      setUser(profile);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
+      }
+    }
+  };
 
   const login = async (
-    usernameOrEmail: string,
+    emailOrUsername: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
-    const trimmedInput = usernameOrEmail.trim().toLowerCase();
+    const trimmedInput = emailOrUsername.trim().toLowerCase();
     const trimmedPass = password.trim();
 
-    // 1. Direct validation for master admin credentials
+    if (!trimmedInput || !trimmedPass) {
+      return { success: false, error: 'Please enter both email and password.' };
+    }
+
+    // Standardize input (if user typed "admin", resolve to "admin@eggstra.farm")
+    const email = trimmedInput.includes('@') ? trimmedInput : `${trimmedInput}@eggstra.farm`;
+
+    // 1. Direct master admin credential bypass if offline or default admin
     const isMasterAdminMatch =
-      (trimmedInput === 'admin' || trimmedInput === 'admin@eggstra.farm' || trimmedInput === 'admin@eggstra.local') &&
+      (trimmedInput === 'admin' || trimmedInput === 'admin@eggstra.farm') &&
       trimmedPass === 'password123';
 
     if (isMasterAdminMatch) {
@@ -131,19 +214,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(MASTER_ADMIN_USER));
       }
 
-      // Try registering/signing in on Supabase in the background if configured
+      // Sync master admin in Supabase in background
       if (isSupabaseConfigured && supabase) {
         try {
-          const email = 'admin@eggstra.farm';
           const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
+            email: 'admin@eggstra.farm',
             password: 'password123',
           });
 
           if (signInError && signInError.message.includes('Invalid login credentials')) {
-            // Auto sign-up master admin in Supabase
             await supabase.auth.signUp({
-              email,
+              email: 'admin@eggstra.farm',
               password: 'password123',
               options: {
                 data: {
@@ -161,42 +242,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     }
 
-    // 2. Try Supabase Auth for any other standard user credentials
+    // 2. Standard Supabase Auth authentication
     if (isSupabaseConfigured && supabase) {
       try {
-        const normalizedEmail = trimmedInput.includes('@') ? trimmedInput : `${trimmedInput}@eggstra.farm`;
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
+          email,
           password: trimmedPass,
         });
 
         if (error) {
-          return { success: false, error: error.message || 'Invalid username or password.' };
+          return { success: false, error: error.message || 'Invalid email or password.' };
         }
 
         if (data.user) {
-          const authUser: AuthUser = {
-            id: data.user.id,
-            username: data.user.email?.split('@')[0] || trimmedInput,
-            email: data.user.email || normalizedEmail,
-            role: 'master_admin',
-            fullName: data.user.user_metadata?.full_name || 'Farm Administrator',
-          };
+          const profile = await fetchUserProfile(data.user.id, data.user.email || email);
+          if (!profile) {
+            await supabase.auth.signOut();
+            return {
+              success: false,
+              error: 'This account has been deactivated. Please contact the farm administrator.',
+            };
+          }
 
-          setUser(authUser);
+          setUser(profile);
           if (typeof window !== 'undefined') {
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
           }
           return { success: true };
         }
       } catch (err: any) {
-        return { success: false, error: err.message || 'Authentication error.' };
+        return { success: false, error: err.message || 'Authentication failed. Please check connection.' };
       }
     }
 
     return {
       success: false,
-      error: 'Invalid credentials. Master admin is username: "admin" and password: "password123".',
+      error: 'Invalid credentials. Please verify your email and password.',
     };
   };
 
@@ -214,14 +295,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Role helper checks
+  const role = user?.role || 'viewer';
+  const isMasterAdmin = role === 'master_admin';
+  const isManager = role === 'manager' || isMasterAdmin;
+  const isFarmHand = role === 'farm_hand' || isManager || isMasterAdmin;
+  const isViewer = Boolean(user);
+
+  const hasRole = useCallback(
+    (allowedRoles: UserRole[]): boolean => {
+      if (!user) return false;
+      if (user.role === 'master_admin') return true;
+      return allowedRoles.includes(user.role);
+    },
+    [user]
+  );
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: Boolean(user),
         isLoading,
+        isMasterAdmin,
+        isManager,
+        isFarmHand,
+        isViewer,
+        hasRole,
         login,
         logout,
+        refreshProfile,
       }}
     >
       {children}

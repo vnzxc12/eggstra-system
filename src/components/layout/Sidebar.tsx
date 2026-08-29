@@ -148,8 +148,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <UserCheck className="w-4 h-4" />
             </div>
             <div className="truncate max-w-[130px]">
-              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{user.username}</p>
-              <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Master Admin</p>
+              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{user.fullName || user.username}</p>
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold capitalize">
+                {user.role === 'master_admin' ? 'Master Admin' : user.role.replace('_', ' ')}
+              </p>
             </div>
           </div>
           <button

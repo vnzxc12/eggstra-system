@@ -129,3 +129,15 @@ export interface MortalityPoint {
   ratePercent: number;
   status: 'normal' | 'warning' | 'critical';
 }
+
+export type UserRole = 'master_admin' | 'manager' | 'farm_hand' | 'viewer';
+export type UserStatus = 'active' | 'inactive';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+  status: UserStatus;
+  created_at: string;
+}
