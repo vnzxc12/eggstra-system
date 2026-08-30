@@ -4,7 +4,7 @@
 // Eggstra - Printable POS Invoice & Thermal Receipt (Philippine Peso ₱)
 // ==============================================================================
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Printer, Egg } from 'lucide-react';
 import { SalesRecord } from '@/lib/types/poultry';
 import { formatPHP, CURRENCY_SYMBOL } from '@/lib/utils/formatters';
@@ -23,6 +23,21 @@ const ITEM_NAMES: Record<string, string> = {
 };
 
 export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, isOpen, onClose }) => {
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !sale) return null;
 
   const handlePrint = () => {
@@ -32,17 +47,34 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, isOpen, onClos
   const invoiceNumber = `INV-${sale.id.slice(-6).toUpperCase()}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden my-6">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      {/* Clickable backdrop overlay */}
+      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
+
+      <div className="relative z-10 w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden my-0 sm:my-6 max-h-[92vh] sm:max-h-[88vh] flex flex-col">
+        {/* Mobile Drag Indicator Bar */}
+        <div className="sm:hidden pt-2.5 pb-1 flex justify-center bg-slate-50 dark:bg-slate-950/60 shrink-0">
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
+        </div>
+
         {/* Header (No Print) */}
-        <div className="no-print flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
+        <div className="no-print flex items-center justify-between px-4 py-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
             <Printer className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span className="font-bold text-sm">Receipt &amp; Invoice Summary (PHP)</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close modal"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

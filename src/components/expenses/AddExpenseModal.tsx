@@ -4,7 +4,7 @@
 // Eggstra - Add Expense Record Modal (Mobile Bottom-Sheet & Toast Alerts)
 // ==============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, Tag, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { usePoultry } from '@/lib/context/PoultryContext';
 import { useToast } from '@/components/common/ToastContext';
@@ -36,6 +36,21 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
   const [expenseDate, setExpenseDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -82,24 +97,41 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[94vh] sm:max-h-[88vh] flex flex-col transition-all">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      {/* Clickable backdrop overlay */}
+      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
+
+      <div className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] sm:max-h-[88vh] flex flex-col transition-all">
+        {/* Mobile Drag Indicator Bar */}
+        <div className="sm:hidden pt-2.5 pb-1 flex justify-center bg-slate-50 dark:bg-slate-950/60 shrink-0">
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 py-3.5 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 p-0.5 shadow-xs shrink-0">
               <div className="w-full h-full bg-white dark:bg-slate-900 rounded-[10px] flex items-center justify-center text-amber-500 font-bold">
                 <span>{CURRENCY_SYMBOL}</span>
               </div>
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">Log Farm Expense (PHP)</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Record layer feed, medication, bedding, and labor costs</p>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate">Log Farm Expense (PHP)</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Record layer feed, medication, bedding, and labor costs</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close modal"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0 ml-2"
           >
             <X className="w-5 h-5" />
           </button>
@@ -203,11 +235,21 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          <div className="pt-2 pb-2 sm:pb-0">
+          {/* Action Buttons: Cancel and Submit */}
+          <div className="pt-3 pb-2 sm:pb-0 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="w-full py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 order-2 sm:order-1"
+            >
+              <X className="w-4 h-4" />
+              <span>Cancel</span>
+            </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 order-1 sm:order-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isSubmitting ? 'Logging...' : 'Save Expense Record (PHP)'}</span>
