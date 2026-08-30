@@ -549,13 +549,16 @@ export const PoultryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addFlock = async (flockData: Omit<Flock, 'id' | 'created_at' | 'current_count'>): Promise<Flock> => {
     const newFlock: Flock = {
       ...flockData,
-      id: isSupabaseLive ? undefined as any : `flock-${Date.now()}`,
+      id: isSupabaseLive ? (undefined as any) : `flock-${Date.now()}`,
       current_count: flockData.initial_count,
       created_at: new Date().toISOString(),
     };
 
     if (isSupabaseLive && supabase) {
-      const { data, error } = await supabase.from('flocks').insert([newFlock]).select().single();
+      const payload: any = { ...newFlock };
+      delete payload.id;
+
+      const { data, error } = await supabase.from('flocks').insert([payload]).select().single();
       if (error) throw error;
       const inserted = data as Flock;
       setFlocks((prev) => [inserted, ...prev]);
